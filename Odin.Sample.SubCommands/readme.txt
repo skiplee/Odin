@@ -1,4 +1,10 @@
 ﻿Intent is to be able to call it like Git commands.
+﻿A typical pattern is 
+﻿   tool.exe noun verb options
 
-subcommander.exe Read         (performs a read)
-subcommander.exe Read help    (displays help for the Read command)
+Sample should show implementing commands that run in this form
+util.exe screen add -name "myScreen"         
+util.exe screen list
+util.exe screen remove "myScreen"
+util.exe logs list
+etc.
