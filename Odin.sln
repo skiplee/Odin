@@ -14,6 +14,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Odin.Demo", "Odin.Demo\Odin.Demo.csproj", "{F3682E22-F249-40F5-922A-9758ACF6E3FE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Odin.Sample.Tasks", "Odin.Sample.Tasks\Odin.Sample.Tasks.csproj", "{DBD5E409-6640-454A-B1ED-E3737BECABFE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Odin.Sample.SubCommands", "Odin.Sample.SubCommands\Odin.Sample.SubCommands.csproj", "{299033F0-2662-4C22-944B-51F1AEA2DC4E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +36,14 @@ Global
 		{F3682E22-F249-40F5-922A-9758ACF6E3FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F3682E22-F249-40F5-922A-9758ACF6E3FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F3682E22-F249-40F5-922A-9758ACF6E3FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBD5E409-6640-454A-B1ED-E3737BECABFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBD5E409-6640-454A-B1ED-E3737BECABFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBD5E409-6640-454A-B1ED-E3737BECABFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBD5E409-6640-454A-B1ED-E3737BECABFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{299033F0-2662-4C22-944B-51F1AEA2DC4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{299033F0-2662-4C22-944B-51F1AEA2DC4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{299033F0-2662-4C22-944B-51F1AEA2DC4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{299033F0-2662-4C22-944B-51F1AEA2DC4E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
