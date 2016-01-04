@@ -70,23 +70,19 @@ namespace Odin.Chores
 
         public virtual int Execute(params string[] args)
         {
-            var result = -1;
             
             var invocation = this.GenerateInvocation(args);
-            if (invocation != null)
+            if (invocation != null && invocation.CanInvoke())
             {
-                if (invocation.CanInvoke())
-                {
-                    result =  invocation.Invoke();
-                }
+                invocation.Invoke();
+                return 0;
             }
-
-            if (result == 0)
-                return result;
-
-            this.Logger.Error("Unrecognized command sequence: {0}", string.Join(" ", args));
-            this.Help();
-            return result;
+            else
+            {
+                this.Logger.Error("Unrecognized command sequence: {0}", string.Join(" ", args));
+                this.Help();
+                return -1;
+            }
         }
 
         private ChoreRunnerInvocation GenerateInvocation(string[] args)

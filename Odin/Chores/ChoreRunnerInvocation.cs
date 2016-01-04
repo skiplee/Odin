@@ -29,12 +29,9 @@ namespace Odin.Chores
 
         }
 
-        public int Invoke()
+        public void Invoke()
         {
-            var result = -1;
-
             this.Chores.ForEach(c => c.Invoke(this._choreRunner, new object[0]));
-            return result;
         }
     }
 }
