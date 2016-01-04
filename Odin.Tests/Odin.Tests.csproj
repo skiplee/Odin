@@ -52,6 +52,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Chores\ChoresTest.cs" />
+    <Compile Include="Chores\TestChores.cs" />
     <Compile Include="Demo\RootCommandRouteTests.cs" />
     <Compile Include="Lib\ControllerHelpTests.cs" />
     <Compile Include="Lib\ControllerInvocationTests.cs" />

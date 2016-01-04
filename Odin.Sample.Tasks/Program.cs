@@ -10,8 +10,8 @@ namespace Odin.Sample.Tasks
     {
         static void Main(string[] args)
         {
-            var command = new TaskCommand();
-            command.Execute(args);
+            var chores = new MyChores();
+            chores.Execute(args);
         }
     }
 }
