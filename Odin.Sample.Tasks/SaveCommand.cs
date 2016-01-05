@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Odin.Chores;
 
 namespace Odin.Sample.Tasks
 {
@@ -11,7 +12,7 @@ namespace Odin.Sample.Tasks
             _inputs = inputs;
         }
 
-        [Action(IsDefault = true)]
+        [Chore]
         public void Save()
         {
             using (var file = File.OpenWrite($"{_inputs.InputString}.txt"))

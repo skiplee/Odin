@@ -4,6 +4,9 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Odin.Attributes;
+using Odin.Demo;
+using Odin.Logging;
 
 namespace Odin.Tests
 {
@@ -11,19 +14,10 @@ namespace Odin.Tests
     public class SubCommand : Command
     {
 
-        public SubCommand(Logger logger) : base(logger)
-        {
-        }
-
-        public SubCommand() : base()
-        {
-            
-        }
-
         [Action(IsDefault = true)]
         public virtual void DoSomething()
         {
-            
+            this.Logger.Info("Do something!");
         }
     }
 }

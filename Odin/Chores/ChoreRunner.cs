@@ -4,27 +4,25 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Odin.Configuration;
+using Odin.Logging;
 
 namespace Odin.Chores
 {
     public abstract class ChoreRunner 
     {
-        private Dictionary<string, ActionMap> _actionMaps;
-        public Logger Logger { get; private set; }
+        public ILogger Logger { get; private set; }
         public string Description { get; }
 
 
-        protected ChoreRunner(Logger logger = null, Conventions conventions = null)
+        protected ChoreRunner(ILogger logger = null, IConventions conventions = null)
         {
 
             if (logger != null)
                 Logger = logger;
             else
             {
-                Logger = new Logger();
-                Logger.OnInfo += Console.Write;
-                Logger.OnWarning += Console.Write;
-                Logger.OnError += Console.Error.Write;
+                Logger = new ConsoleLogger();
             }
 
             //_conventions = conventions ?? new DefaultConventions();
@@ -77,7 +75,7 @@ namespace Odin.Chores
                 else
                 {
                     Logger.Error("Unrecognized chore sequence: {0}", string.Join(" ", args));
-                    Help();
+                    //Help();
                     return -1;
                 }
             }
@@ -88,7 +86,7 @@ namespace Odin.Chores
                 descriptionFormat.Append("    Message: {1}\n");
                 descriptionFormat.Append("    Source: {2}");
                 Logger.Error(descriptionFormat.ToString(), string.Join(" ", args), e.Message, e.Source);
-                Help();
+                //Help();
                 return -1;
             }
         }
@@ -170,44 +168,44 @@ namespace Odin.Chores
             // check that all values are preceded by a parameterName (eg, '-param CHORE "value for param"' is invalid)
         }
 
-        public virtual string GenerateHelp(string actionName = "")
-        {
+//        public virtual string GenerateHelp(string actionName = "")
+//        {
+//
+//            if (!string.IsNullOrWhiteSpace(actionName))
+//            {
+//                var actionMap = _actionMaps[actionName];
+//                return actionMap.Help();
+//            }
+//
+//            var builder = new StringBuilder();
+//            builder.AppendLine(Description);
+//
+//            if (_actionMaps != null && _actionMaps.Any())
+//                GetMethodsHelp(builder);
+//
+//            var result = builder.ToString();
+//
+//            return result;
+//        }
 
-            if (!string.IsNullOrWhiteSpace(actionName))
-            {
-                var actionMap = _actionMaps[actionName];
-                return actionMap.Help();
-            }
-
-            var builder = new StringBuilder();
-            builder.AppendLine(Description);
-
-            if (_actionMaps != null && _actionMaps.Any())
-                GetMethodsHelp(builder);
-
-            var result = builder.ToString();
-
-            return result;
-        }
-
-        private void GetMethodsHelp(StringBuilder builder)
-        {
-            builder
-                .AppendLine()
-                .AppendLine()
-                .AppendLine("ACTIONS");
-
-            foreach (var method in _actionMaps.Values.OrderBy(m => m.Name))
-            {
-                var methodHelp = method.Help();;
-                builder.AppendLine(methodHelp);
-            }
-
-            builder.AppendLine();
-            builder.AppendLine("To get help for actions");
-            builder.AppendFormat("\t{0} Help <action>", Name)
-                .AppendLine();
-        }
+//        private void GetMethodsHelp(StringBuilder builder)
+//        {
+//            builder
+//                .AppendLine()
+//                .AppendLine()
+//                .AppendLine("ACTIONS");
+//
+//            foreach (var method in _actionMaps.Values.OrderBy(m => m.Name))
+//            {
+//                var methodHelp = method.Help();;
+//                builder.AppendLine(methodHelp);
+//            }
+//
+//            builder.AppendLine();
+//            builder.AppendLine("To get help for actions");
+//            builder.AppendFormat("\t{0} Help <action>", Name)
+//                .AppendLine();
+//        }
 
         private void GetSubCommandsHelp(StringBuilder builder)
         {
@@ -222,14 +220,14 @@ namespace Odin.Chores
             builder.AppendFormat("\t{0} <subcommand> Help", Name);
         }
 
-        [Action]
-        public void Help(
-            [Description("The name of the action to provide help for.")]
-            string actionName = "")
-        {
-            var help = GenerateHelp(actionName);
-            Logger.Info(help);
-        }
+//        [Action]
+//        public void Help(
+//            [Description("The name of the action to provide help for.")]
+//            string actionName = "")
+//        {
+//            var help = GenerateHelp(actionName);
+//            Logger.Info(help);
+//        }
     }
 
     public class ChoreRunnerException : Exception

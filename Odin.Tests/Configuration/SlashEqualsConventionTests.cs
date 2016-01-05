@@ -1,25 +1,28 @@
-﻿using System;
-using System.Linq;
-using NSubstitute;
+using System;
 using NUnit.Framework;
+using Odin.Configuration;
 using Shouldly;
 
-namespace Odin.Tests
+namespace Odin.Tests.Lib.Configuration
 {
     [TestFixture]
-    public class ControllerInvocationTests
+    public class SlashEqualsConventionTests
     {
         [SetUp]
         public void BeforeEach()
         {
             this.Logger = new StringBuilderLogger();
             this.SubCommand = new SubCommand();
-            this.Subject = new DefaultCommand(this.SubCommand, this.Logger);
+            this.Subject = new DefaultCommand(this.SubCommand);
+            this.Subject
+                .Use(this.Logger)
+                .Use(new SlashEqualsConvention())
+                ;
         }
 
-        public StringBuilderLogger Logger { get; set; }
+        private StringBuilderLogger Logger { get; set; }
 
-        public SubCommand SubCommand { get; set; }
+        private SubCommand SubCommand { get; set; }
 
         public DefaultCommand Subject { get; set; }
 
@@ -78,9 +81,10 @@ namespace Odin.Tests
         [Test]
         public void WithRequiredStringArg()
         {
-            var args = new[] { "WithRequiredStringArg", "--argument", "value" };
+            var args = new[] { "WithRequiredStringArg", "/argument=value" };
 
-            var result =this.Subject.GenerateInvocation(args);
+
+            var result = this.Subject.GenerateInvocation(args);
 
             result.ShouldNotBeNull();
             result.ParameterValues.Count.ShouldBe(1);
@@ -91,7 +95,7 @@ namespace Odin.Tests
         [Test]
         public void WithMultipleRequiredStringArgs()
         {
-            var args = new[] { "WithRequiredStringArgs", "--argument1", "value1", "--argument2", "value2" };
+            var args = new[] { "WithRequiredStringArgs", "/argument1=value1", "/argument2=value2"};
 
             var result = this.Subject.GenerateInvocation(args);
 
@@ -125,7 +129,7 @@ namespace Odin.Tests
         [Test]
         public void SwitchWithValue()
         {
-            var args = new[] { "WithSwitch", "--argument", "true" };
+            var args = new[] { "WithSwitch", "/argument=true"};
 
             var result = this.Subject.GenerateInvocation(args);
 
@@ -138,7 +142,7 @@ namespace Odin.Tests
         [Test]
         public void SwitchWithoutValue()
         {
-            var args = new[] { "WithSwitch", "--argument"};
+            var args = new[] { "WithSwitch", "/argument" };
 
             var result = this.Subject.GenerateInvocation(args);
 
@@ -149,9 +153,22 @@ namespace Odin.Tests
         }
 
         [Test]
+        public void NegativeSwitch()
+        {
+            var args = new[] { "WithSwitch", "/no-argument" };
+
+            var result = this.Subject.GenerateInvocation(args);
+
+            result.ShouldNotBeNull();
+            result.ParameterValues.Count.ShouldBe(1);
+            result.ParameterValues[0].Name.ShouldBe("argument");
+            result.ParameterValues[0].Value.ShouldBe(false);
+        }
+
+        [Test]
         public void SwitchNotGiven()
         {
-            var args = new[] { "WithSwitch"};
+            var args = new[] { "WithSwitch" };
 
             var result = this.Subject.GenerateInvocation(args);
 
@@ -181,7 +198,7 @@ namespace Odin.Tests
         [Test]
         public void WithOptionalStringArg_PassIt()
         {
-            var args = new[] { "WithOptionalStringArg", "--argument", "value1" };
+            var args = new[] { "WithOptionalStringArg", "/argument=value1"};
 
             var result = this.Subject.GenerateInvocation(args);
 
@@ -194,7 +211,7 @@ namespace Odin.Tests
         [Test]
         public void WithOptionalStringArgs_PassThemAll()
         {
-            var args = new[] { "WithOptionalStringArgs", "--argument1", "value1", "--argument2", "value2", "--argument3", "value3" };
+            var args = new[] { "WithOptionalStringArgs", "/argument1=value1", "/argument2=value2", "/argument3=value3"};
 
             this.Subject.Execute(args);
 
@@ -213,7 +230,7 @@ namespace Odin.Tests
         [Test]
         public void WithOptionalStringArgs_PassHead()
         {
-            var args = new[] { "WithOptionalStringArgs", "--argument1", "value1" };
+            var args = new[] { "WithOptionalStringArgs", "/argument1=value1"};
 
             var result = this.Subject.GenerateInvocation(args);
 
@@ -230,7 +247,7 @@ namespace Odin.Tests
         [Test]
         public void WithOptionalStringArgs_PassBody()
         {
-            var args = new[] { "WithOptionalStringArgs", "--argument2", "value2" };
+            var args = new[] { "WithOptionalStringArgs", "/argument2=value2"};
 
             var result = this.Subject.GenerateInvocation(args);
 
@@ -264,7 +281,7 @@ namespace Odin.Tests
         [Test]
         public void WithOptionalStringArgs_PassTail()
         {
-            var args = new[] { "WithOptionalStringArgs", "--argument3", "value3" };
+            var args = new[] { "WithOptionalStringArgs", "/argument3=value3"};
 
             var result = this.Subject.GenerateInvocation(args);
 
@@ -290,7 +307,7 @@ namespace Odin.Tests
             var result = this.Subject.GenerateInvocation(args);
 
             result.ShouldNotBeNull();
-            result.Instance.ShouldBe(this.SubCommand);
+            result.Command.ShouldBe(this.SubCommand);
             result.ParameterValues.Count.ShouldBe(0);
         }
 

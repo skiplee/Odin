@@ -1,18 +1,20 @@
 ﻿using System.ComponentModel;
+using Odin.Attributes;
+using Odin.Logging;
 
 namespace Odin.Tests
 {
-    [Description("This is the default controller")]
+    [Description("This is the default command")]
     public class DefaultCommand : Command
     {
         public object[] MethodArguments { get; set; }
 
-        public DefaultCommand() : this(new SubCommand(), new Logger())
+        public DefaultCommand() 
         {
-           
+            
         }
 
-        public DefaultCommand(SubCommand subcommand, Logger logger) : base(logger)
+        public DefaultCommand(SubCommand subcommand) 
         {
             var subcommand1 = subcommand ?? new SubCommand();
             base.RegisterSubCommand(subcommand1);
@@ -26,10 +28,13 @@ namespace Odin.Tests
         [Action(IsDefault = true)]
         [Description("A description of the DoSomething() method.")]
         public void DoSomething(
+            [Alias("a", "A")]
             [Description("Lorem ipsum dolor sit amet, consectetur adipiscing elit")]
-            string argument1 = "value1-not-passed", 
+            string argument1 = "value1-not-passed",
+            [Alias("b", "B")]
             [Description("sed do eiusmod tempor incididunt ut labore et dolore magna aliqua")]
-            string argument2 = "value2-not-passed", 
+            string argument2 = "value2-not-passed",
+            [Alias("c", "C")]
             [Description("Ut enim ad minim veniam")]
             string argument3 = "value3-not-passed")
         {
@@ -41,6 +46,19 @@ namespace Odin.Tests
         {
             return -2;
         }
+
+        [Action]
+        public virtual bool AlwaysReturnsTrue()
+        {
+            return true;
+        }
+
+        [Action]
+        public virtual bool AlwaysReturnsFalse()
+        {
+            return false;
+        }
+
 
         [Action]
         public virtual void SomeOtherControllerAction()
@@ -79,6 +97,12 @@ namespace Odin.Tests
         public void WithSwitch(bool argument)
         {
             MethodArguments = new object[] { argument };
+        }
+
+        [Action]
+        public void WithArgumentsOfVariousTypes(int i, long j)
+        {
+            
         }
     }
 }

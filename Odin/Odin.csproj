@@ -20,6 +20,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\Odin.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -28,6 +29,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Odin.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -40,22 +42,42 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ActionAttribute.cs" />
-    <Compile Include="ActionInvocation.cs" />
-    <Compile Include="ActionMap.cs" />
     <Compile Include="Chores\ArgumentInfo.cs" />
     <Compile Include="Chores\Chore.cs" />
     <Compile Include="Chores\ParameterAttribute.cs" />
     <Compile Include="Chores\ChoreRunnerInvocation.cs" />
+    <Compile Include="Attributes\ActionAttribute.cs" />
+    <Compile Include="Attributes\ParserAttribute.cs" />
+    <Compile Include="Configuration\ConventionsExtensions.cs" />
+    <Compile Include="Configuration\HyphenCaseParser.cs" />
+    <Compile Include="Configuration\SlashColonParser.cs" />
+    <Compile Include="Configuration\SlashEqualsParser.cs" />
+    <Compile Include="Exceptions\UnmappedParameterException.cs" />
+    <Compile Include="Parsing\IParser.cs" />
+    <Compile Include="Configuration\DefaultHelpWriter.cs" />
+    <Compile Include="Configuration\EnumerableExtensions.cs" />
+    <Compile Include="Configuration\IHelpWriter.cs" />
+    <Compile Include="Parsing\ParseResult.cs" />
+    <Compile Include="Configuration\SlashEqualsConvention.cs" />
+    <Compile Include="Configuration\StringExtensions.cs" />
+    <Compile Include="MethodInvocation.cs" />
+    <Compile Include="Attributes\AliasAttribute.cs" />
     <Compile Include="Command.cs" />
-    <Compile Include="Conventions.cs" />
-    <Compile Include="DefaultConventions.cs" />
-    <Compile Include="Logger.cs" />
-    <Compile Include="ParameterMap.cs" />
+    <Compile Include="Configuration\IConventions.cs" />
+    <Compile Include="Configuration\SlashColonConvention.cs" />
+    <Compile Include="Configuration\HyphenCaseConvention.cs" />
+    <Compile Include="Logging\ConsoleLogger.cs" />
+    <Compile Include="Logging\ILogger.cs" />
+    <Compile Include="Exceptions\ParameterConversionException.cs" />
     <Compile Include="ParameterValue.cs" />
+    <Compile Include="Parsing\ReflectionExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Chores\ChoreAttribute.cs" />
     <Compile Include="Chores\ChoreRunner.cs" />
+    <Compile Include="ValidationResult.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="High-Level-Model.cd" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

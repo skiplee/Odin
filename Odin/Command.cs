@@ -1,253 +1,313 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Odin.Attributes;
+using Odin.Configuration;
+using Odin.Exceptions;
+using Odin.Logging;
 
 namespace Odin
 {
+    /// <summary>
+    /// Base class an Odin command.
+    /// </summary>
+    /// <remarks>
+    /// Commands are organized in a tree structure to indicate subcomands.
+    /// Actions on commands are callable at their level in tree structure.
+    /// SubCommands, Actions, and Parameters are resolved from the input tokens by convention.
+    /// </remarks>
     public abstract class Command
     {
-        private Dictionary<string, ActionMap> _actionMaps;
-        private Dictionary<string, Command> SubCommands { get; }
-        protected Command(Logger logger = null, Conventions conventions = null)
+        protected Command()
         {
-            SubCommands = new Dictionary<string, Command>();
-            if (logger != null)
-            {
-                _Logger = logger;
-            }
-            else
-            {
-                _Logger = new Logger();
+            _conventions = new HyphenCaseConvention();
+            _helpWriter = new DefaultHelpWriter();
 
-                Logger.OnInfo += Console.Write;
-                Logger.OnWarning += Console.Write;
-                Logger.OnError += Console.Error.Write;
-            }
+            _subCommands = new List<Command>();
 
-            _conventions = conventions ?? new DefaultConventions();
+            InitializeActions();
 
-            this.Description = GetDescription();
+            this.DisplayHelpWhenArgsAreEmpty = true;
         }
 
-        protected void InitializeActionMaps()
+        /// <summary>
+        /// Gets or sets if the command should emit help when args are empty.
+        /// </summary>
+        public bool DisplayHelpWhenArgsAreEmpty { get; set; }
+
+        /// <summary>
+        /// Sets the convention to be used with the command. Only conventions applied to the root command are used.
+        /// </summary>
+        /// <param name="conventions"></param>
+        /// <returns></returns>
+        public Command Use(IConventions conventions)
         {
-            if (this._actionMaps != null)
-                return;
-            this._actionMaps = GetActionMaps();
+            _conventions = conventions;
+            return this;
         }
 
-        public string Description { get; }
-
-        internal void SetParent(Command parent)
+        private void InitializeActions()
         {
-            this._parent = parent;
-        }
-
-        private Command _parent;
-        protected Command Parent => _parent;
-
-        private readonly Logger _Logger;
-
-        public Logger Logger
-        {
-            get
-            {
-                if (Parent != null)
-                    return Parent.Logger;
-                return _Logger;
-            }
-        }
-
-        private readonly Conventions _conventions;
-        public Conventions Conventions
-        {
-            get
-            {
-                if (Parent != null)
-                    return Parent.Conventions;
-                return _conventions;
-            }
-        }
-
-        public virtual string Name
-        {
-            get
-            {
-                return Conventions.GetCommandName(this);
-            }
-        }
-
-        private Dictionary<string, ActionMap> GetActionMaps()
-        {
-            return GetActionMethods()
-                .Select(row => new ActionMap(this, row))
-                .ToDictionary(row => row.Name)
-                ;
-        }
-
-        private IEnumerable<MethodInfo> GetActionMethods()
-        {
-            return this
+            this._actions = this
                 .GetType()
                 .GetMethods()
                 .Where(m => m.GetCustomAttribute<ActionAttribute>() != null)
+                .Select(row => new MethodInvocation(this, row))
+                .ToList()
                 ;
         }
 
-        private string GetDescription()
+        /// <summary>
+        /// Sets the logger to be used with the command. Only the logger applied to the root command is used.
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <returns></returns>
+        public Command Use(ILogger logger)
         {
-            var attribute = this.GetType().GetCustomAttribute<DescriptionAttribute>(inherit:true);
-            return attribute != null ? attribute.Description : this.Name;
+            _logger = logger ?? new ConsoleLogger();
+            return this;
         }
 
-        protected virtual void RegisterSubCommand(Command command)
+        /// <summary>
+        /// Sets the helpwriter to be used with the command. Only the helpwriter applied to the root command is used.
+        /// </summary>
+        /// <param name="helpWriter"></param>
+        /// <returns></returns>
+        public Command Use(IHelpWriter helpWriter)
+        {
+            _helpWriter = helpWriter;
+            return this;
+        }
+
+        private void SetParent(Command parent)
+        {
+            this.Parent = parent;
+        }
+
+        /// <summary>
+        /// Gets the parent of the command.
+        /// </summary>
+        public Command Parent { get; private set; }
+
+        private ILogger _logger = new ConsoleLogger();
+        /// <summary>
+        /// Gets the logger for the command tree.
+        /// </summary>
+        public ILogger Logger => IsRoot() ? _logger : Parent.Logger;
+
+        private  IConventions _conventions;
+        private IHelpWriter _helpWriter;
+
+        /// <summary>
+        /// Gets the helpwriter for the command tree.
+        /// </summary>
+        public IHelpWriter HelpWriter => IsRoot() ? _helpWriter : Parent.HelpWriter;
+
+        /// <summary>
+        /// Gets the conventions for the command tree.
+        /// </summary>
+        public IConventions Conventions => IsRoot() ? _conventions : Parent.Conventions ;
+
+        /// <summary>
+        /// Gets the conventional name of the command.
+        /// </summary>
+        public virtual string Name => Conventions.GetCommandName(this);
+
+        /// <summary>
+        /// Gets the aliases applied to the command.
+        /// </summary>
+        public virtual string[] Aliases
+        {
+            get { return this.GetType().GetCustomAttribute<AliasAttribute>()?.Aliases.ToArray() ?? new string[] { }; }
+        }
+
+        /// <summary>
+        /// Gets all of the identifiers applied to the command.
+        /// </summary>
+        public string[] Identifiers
+        {
+            get { return Aliases.Concat(new string[] {this.Name}).ToArray(); }
+        }
+
+        /// <summary>
+        /// True if the token matches the command, otherwise false.
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public virtual bool IsIdentifiedBy(string token)
+        {
+            return token == Name || Aliases.Contains(token);
+        }
+
+        private List<Command> _subCommands;
+
+        /// <summary>
+        /// Gets the subcommands registered with the current command.
+        /// </summary>
+        public IReadOnlyCollection<Command> SubCommands => this._subCommands.AsReadOnly();
+
+        private List<MethodInvocation> _actions;
+
+        /// <summary>
+        /// Gets the actions registered with the current command.
+        /// </summary>
+        public IReadOnlyCollection<MethodInvocation> Actions => this._actions.AsReadOnly();
+
+        /// <summary>
+        /// Adds a command to the command tree.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <returns></returns>
+        public Command RegisterSubCommand(Command command)
         {
             command.SetParent(this);
-            this.SubCommands[command.Name] = command;
+            this._subCommands.Add(command);
+            return this;
         }
 
-        public virtual int Execute(params string[] args)
+        /// <summary>
+        /// Executes the command.
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns>0 if successful.</returns>
+        public int Execute(params string[] args)
         {
-            int result = -1;
-
-            var invocation = this.GenerateInvocation(args);
-            if (invocation != null)
+            if (this.DisplayHelpWhenArgsAreEmpty && !args.Any())
             {
-                if (invocation.CanInvoke())
-                {
-                    result =  invocation.Invoke();
-                }
+                this.Help();
+                return 0;
             }
+
+            var result = -1;
+            var invocation = this.GenerateInvocation(args);
+            if (invocation?.CanInvoke() == true)
+                result =  invocation.Invoke();
 
             if (result == 0)
                 return result;
 
-            this.Logger.Error("Unrecognized command sequence: {0}", string.Join(" ", args));
+            this.Logger.Error("Unrecognized command sequence: {0}\n", string.Join(" ", args));
             this.Help();
             return result;
         }
 
-        public ActionInvocation GenerateInvocation(string[] args)
+        /// <summary>
+        /// Generates an invocation for the current command.
+        /// </summary>
+        /// <param name="tokens"></param>
+        /// <returns></returns>
+        /// <remarks>Useful in testing your command structure.</remarks>
+        public MethodInvocation GenerateInvocation(params string[] tokens)
         {
-            this.InitializeActionMaps();
-
-            var subCommand = GetSubCommandByName(args.FirstOrDefault());
-            if (subCommand != null)
+            try
             {
-                var theRest = args.Skip(1).ToArray();
-                return subCommand.GenerateInvocation(theRest);
-            }
+                var token = tokens.FirstOrDefault();
+                var subCommand = GetSubCommandByToken(token);
+                if (subCommand != null)
+                {
+                    var theRest = tokens.Skip(1).ToArray();
+                    return subCommand.GenerateInvocation(theRest);
+                }
 
-            var actionName = GetActionName(args);
-            if (IsValidActionName(actionName))
+                var action = GetActionByToken(token);
+                var toSkip = 1;
+                if (action == null)
+                {
+                    toSkip = 0;
+                    action = GetDefaultAction();
+                }
+
+                var args = tokens.Skip(toSkip).ToArray();
+                action?.SetParameterValues(args);
+                return action;
+            }
+            catch (ParameterConversionException pce)
             {
-                var actionMap = _actionMaps[actionName];
-                var theRest = args.Skip(1).ToArray();
-                var invocation = actionMap.GenerateInvocation(theRest);
-                return invocation;
-            }
-            else
-            {
-                var actionMap = _actionMaps.Values.FirstOrDefault(row => row.IsDefaultAction);
-                return actionMap?.GenerateInvocation(args);
-            }
-        }
-
-        private bool IsValidActionName(string actionName)
-        {
-            if (string.IsNullOrWhiteSpace(actionName))
-                return false;
-
-            return _actionMaps.ContainsKey(actionName);
-        }
-
-        private string GetActionName(string[] args)
-        {
-            var name = args.FirstOrDefault() ?? 
-                _actionMaps.Values.FirstOrDefault(a => a.IsDefaultAction)?.Name;
-            return name;
-        }
-
-        private Command GetSubCommandByName(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
+                this.Logger.Error(pce.Message);
                 return null;
-            return SubCommands.ContainsKey(name) ? SubCommands[name] : null;
-        }
-
-        public virtual string GenerateHelp(string actionName = "")
-        {
-            this.InitializeActionMaps();
-
-            if (!string.IsNullOrWhiteSpace(actionName))
-            {
-                var actionMap = _actionMaps[actionName];
-                return actionMap.Help();
             }
-
-            var builder = new StringBuilder();
-            builder.AppendLine(this.Description);
-
-            if (SubCommands.Any())
-                GetSubCommandsHelp(builder);
-
-            if (_actionMaps.Any())
-                GetMethodsHelp(builder);
-
-            var result = builder.ToString();
-
-            return result;
         }
 
-        private void GetMethodsHelp(StringBuilder builder)
+        private MethodInvocation GetActionByToken(string token)
         {
-            builder
-                .AppendLine()
-                .AppendLine()
-                .AppendLine("ACTIONS");
-
-            foreach (var method in _actionMaps.Values.OrderBy(m => m.Name))
-            {
-                var methodHelp = method.Help();;
-                builder.AppendLine(methodHelp);
-            }
-
-            builder.AppendLine();
-            builder.AppendLine("To get help for actions");
-            builder.AppendFormat("\t{0} Help <action>", this.Name)
-                .AppendLine();
+            return _actions.FirstOrDefault(action => action.Identifiers.Contains(token));
         }
 
-        private void GetSubCommandsHelp(StringBuilder builder)
+        private Command GetSubCommandByToken(string token)
         {
-            builder
-                .AppendLine()
-                .AppendLine()
-                .AppendLine("SUB COMMANDS");
-
-            foreach (var subCommand in SubCommands.Values)
-            {
-                builder
-                    .AppendFormat("{0,-30}", subCommand.Name)
-                    .AppendLine(subCommand.Description)
-                    ;
-            }
-
-            builder.AppendLine();
-            builder.AppendLine("To get help for subcommands");
-            builder.AppendFormat("\t{0} <subcommand> Help", this.Name);
+            return SubCommands.FirstOrDefault(cmd => cmd.IsIdentifiedBy(token));
         }
 
+        /// <summary>
+        /// Returns the default action for the command.
+        /// </summary>
+        /// <returns></returns>
+        public MethodInvocation GetDefaultAction()
+        {
+            return this.Actions.FirstOrDefault(row => row.IsDefault);
+        }
+
+        /// <summary>
+        /// True if this command is the root of the command tree. Otherwise false.
+        /// </summary>
+        /// <returns></returns>
+        public bool IsRoot()
+        {
+            return this.Parent == null;
+        }
+
+        /// <summary>
+        /// Emits help to the logger.
+        /// </summary>
+        /// <param name="actionName"></param>
         [Action]
         public void Help(
             [Description("The name of the action to provide help for.")]
             string actionName = "")
         {
-            var help = this.GenerateHelp(actionName);
+            var help = this.HelpWriter.Write(this, actionName);
             this.Logger.Info(help);
+        }
+
+        /// <summary>
+        /// Gets a list of validation messages for the command.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<ValidationResult> Validate()
+        {
+            var messages = GetValidationMessages().ToArray();
+            if (messages.Any())
+                yield return new ValidationResult(this.Name, messages);
+
+
+            var validationResults = this.SubCommands.SelectMany(cmd => cmd.Validate());
+            foreach (var validationResult in validationResults)
+            {
+                yield return validationResult;
+            }
+        }
+
+        private IEnumerable<string> GetValidationMessages()
+        {
+            var defaultActions = this.Actions.Where(row => row.IsDefault).ToArray();
+            if (defaultActions.Count() > 1)
+            {
+                var actionNames = defaultActions.Select(row => row.Name).Join(", ");
+                yield return $"There is more than one default action: {actionNames}.";
+            }
+
+            var actionIdentifiers = this.Actions.SelectMany(action => action.Identifiers);
+            var subCommandIdentifiers = this.SubCommands.SelectMany(cmd => cmd.Identifiers);
+            var matchingNames = actionIdentifiers.Intersect(subCommandIdentifiers);
+
+            foreach (var matchingName in matchingNames)
+            {
+                yield return $"There is more than one executable action named '{matchingName}'.";
+            }
         }
     }
 }

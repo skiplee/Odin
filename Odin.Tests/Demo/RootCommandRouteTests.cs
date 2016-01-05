@@ -16,7 +16,8 @@ namespace Odin.Tests.Demo
         public void BeforeEach()
         {
             this.Logger = new StringBuilderLogger();
-            this.Subject = new RootCommand(this.Logger);
+            this.Subject = new RootCommand();
+            this.Subject.Use(this.Logger);
         }
 
         public StringBuilderLogger Logger { get; set; }
@@ -31,7 +32,7 @@ namespace Odin.Tests.Demo
             // Given
 
             // When
-            var result = this.Subject.Execute("Katas", "FizzBuzz", "--input", "3");
+            var result = this.Subject.Execute("katas", "fizz-buzz", "--input", "3");
 
             // Then
             result.ShouldBe(0);
@@ -39,12 +40,26 @@ namespace Odin.Tests.Demo
         }
 
         [Test]
+        public void Execute_FizzBuzz_UsingParamterAlias()
+        {
+            // Given
+
+            // When
+            var result = this.Subject.Execute("katas", "fizz-buzz", "-i", "3");
+
+            // Then
+            result.ShouldBe(0);
+            this.Logger.InfoBuilder.ToString().Trim().ShouldBe("Fizz");
+        }
+
+
+        [Test]
         public void Execute_FizzBuzz_UsingExplicitActionName()
         {
             // Given
 
             // When
-            var result = this.Subject.Execute("Katas", "FizzBuzz", "3");
+            var result = this.Subject.Execute("katas", "fizz-buzz", "3");
 
             // Then
             result.ShouldBe(0);
@@ -57,11 +72,23 @@ namespace Odin.Tests.Demo
             // Given
 
             // When
-            var result = this.Subject.Execute("Katas", "3");
+            var result = this.Subject.Execute("katas", "3");
 
             // Then
             result.ShouldBe(0, this.Logger.InfoBuilder.ToString());
             this.Logger.InfoBuilder.ToString().Trim().ShouldBe("Fizz");
+        }
+
+        [Test]
+        public void Execute_FizzBuzz_WithParsingError_FailsGracefully()
+        {
+            // Given
+
+            // When
+            var result = this.Subject.Execute("katas", "fredbob");
+
+            // Then
+            result.ShouldBe(-1, this.Logger.InfoBuilder.ToString());
         }
 
         #endregion
