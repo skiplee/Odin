@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using Microsoft.CSharp.RuntimeBinder;
 
 namespace Odin.Chores
 {
@@ -31,15 +29,14 @@ namespace Odin.Chores
 
             //_conventions = conventions ?? new DefaultConventions();
 
-            this.Description = GetDescription();
+            Description = GetDescription();
         }
 
 
 
         private Dictionary<string, MethodInfo> GetChoreMethods()
         {
-            return this
-                .GetType()
+            return GetType()
                 .GetMethods()
                 .Where(m => m.GetCustomAttribute<ChoreAttribute>() != null)
                 .ToDictionary(m => m.Name);
@@ -47,8 +44,7 @@ namespace Odin.Chores
 
         private Dictionary<string, PropertyInfo> GetParameterProperties()
         {
-            return this
-                .GetType()
+            return GetType()
                 .GetProperties()
                 .Where(p => p.GetCustomAttribute<ParameterAttribute>() != null)
                 .ToDictionary(p => p.Name);
@@ -57,8 +53,8 @@ namespace Odin.Chores
 
         private string GetDescription()
         {
-            var attribute = this.GetType().GetCustomAttribute<DescriptionAttribute>(inherit:true);
-            return attribute != null ? attribute.Description : this.Name;
+            var attribute = GetType().GetCustomAttribute<DescriptionAttribute>(inherit:true);
+            return attribute != null ? attribute.Description : Name;
         }
 
         public string Name { get; private set; }
@@ -70,25 +66,58 @@ namespace Odin.Chores
 
         public virtual int Execute(params string[] args)
         {
-            
-            var invocation = this.GenerateInvocation(args);
-            if (invocation != null && invocation.CanInvoke())
+            try
             {
-                invocation.Invoke();
-                return 0;
+                var invocation = GenerateInvocation(args);
+                if (invocation != null && CanInvoke(invocation))
+                {
+                    var result = Execute(invocation);
+                    return result;
+                }
+                else
+                {
+                    Logger.Error("Unrecognized chore sequence: {0}", string.Join(" ", args));
+                    Help();
+                    return -1;
+                }
             }
-            else
+            catch (Exception e)
             {
-                this.Logger.Error("Unrecognized command sequence: {0}", string.Join(" ", args));
-                this.Help();
+                var descriptionFormat = new StringBuilder();
+                descriptionFormat.Append("Exception thrown running chore sequence: {0}\n");
+                descriptionFormat.Append("    Message: {1}\n");
+                descriptionFormat.Append("    Source: {2}");
+                Logger.Error(descriptionFormat.ToString(), string.Join(" ", args), e.Message, e.Source);
+                Help();
                 return -1;
             }
         }
 
+        private int Execute(ChoreRunnerInvocation invocation)
+        {
+            foreach (var parameter in invocation.Parameters)
+            {
+                 parameter.Key.SetValue(this, parameter.Value);
+            }
+            foreach (var chore in invocation.Chores)
+            {
+                var invoked = chore.Invoke(this, new object[0]);
+                var result = (int?)invoked ?? 0;
+                if (result != 0)
+                    return result;
+            }
+            return 0;
+        }
+        private static bool CanInvoke(ChoreRunnerInvocation invocation)
+        {
+            return true;
+            //return this.Parameters.Values.All(p => p.IsValueSet());
+        }
+
         private ChoreRunnerInvocation GenerateInvocation(string[] args)
         {
-            var allChores = this.GetChoreMethods();
-            var allParameters = this.GetParameterProperties();
+            var allChores = GetChoreMethods();
+            var allParameters = GetParameterProperties();
 
             var argumentInfos = new List<ArgumentInfo>();
 
@@ -108,6 +137,7 @@ namespace Odin.Chores
                 if (allParameters.ContainsKey(arg))
                 {
                     argumentInfo.ArgumentType = ArgumentTypeEnum.ParameterName;
+                    argumentInfo.Parameter = allParameters[arg];
                     var potentialArgValue = args[i + 1];
                     if ((allChores.ContainsKey(potentialArgValue) || allParameters.ContainsKey(potentialArgValue)))
                     {
@@ -118,17 +148,18 @@ namespace Odin.Chores
                         i++;
                     }
                     argumentInfos.Add(argumentInfo);
+                    i++;
                     continue;
                 }
                 throw new ChoreRunnerException("Invalid argument provided");
             }
             ValidateArguments(argumentInfos);
 
-            var invocation = new ChoreRunnerInvocation(this);
+            var invocation = new ChoreRunnerInvocation();
             var argumentChores = argumentInfos.Where(a => a.ArgumentType == ArgumentTypeEnum.Chore);
             invocation.Chores.AddRange(argumentChores.Select(a => a.Chore));
             var argumentParameters = argumentInfos.Where(a => a.ArgumentType == ArgumentTypeEnum.ParameterName);
-            argumentParameters.ToList().ForEach(p => invocation.Parameters.Add(p.Name, p.ParameterValue));
+            argumentParameters.ToList().ForEach(p => invocation.Parameters.Add(p.Parameter, p.ParameterValue));
             
             return invocation;
         }
@@ -149,7 +180,7 @@ namespace Odin.Chores
             }
 
             var builder = new StringBuilder();
-            builder.AppendLine(this.Description);
+            builder.AppendLine(Description);
 
             if (_actionMaps != null && _actionMaps.Any())
                 GetMethodsHelp(builder);
@@ -174,7 +205,7 @@ namespace Odin.Chores
 
             builder.AppendLine();
             builder.AppendLine("To get help for actions");
-            builder.AppendFormat("\t{0} Help <action>", this.Name)
+            builder.AppendFormat("\t{0} Help <action>", Name)
                 .AppendLine();
         }
 
@@ -188,7 +219,7 @@ namespace Odin.Chores
 
             builder.AppendLine();
             builder.AppendLine("To get help for subcommands");
-            builder.AppendFormat("\t{0} <subcommand> Help", this.Name);
+            builder.AppendFormat("\t{0} <subcommand> Help", Name);
         }
 
         [Action]
@@ -196,8 +227,8 @@ namespace Odin.Chores
             [Description("The name of the action to provide help for.")]
             string actionName = "")
         {
-            var help = this.GenerateHelp(actionName);
-            this.Logger.Info(help);
+            var help = GenerateHelp(actionName);
+            Logger.Info(help);
         }
     }
 
@@ -206,20 +237,6 @@ namespace Odin.Chores
         public ChoreRunnerException(string message) : base(message)
         {
         }
-    }
-
-    internal class ArgumentInfo
-    {
-        public ArgumentInfo(string arg)
-        {
-            this.Name = arg;
-        }
-
-        public MethodInfo Chore { get; set; }
-
-        public string ParameterValue { get; set; }
-        public ArgumentTypeEnum ArgumentType { get; set; }
-        public string Name { get; set; }
     }
 
     internal enum ArgumentTypeEnum

@@ -8,10 +8,10 @@ namespace Odin.Sample.Tasks
 {
     class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             var chores = new MyChores();
-            chores.Execute(args);
+            return chores.Execute(args);
         }
     }
 }

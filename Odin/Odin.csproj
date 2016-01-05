@@ -43,6 +43,7 @@
     <Compile Include="ActionAttribute.cs" />
     <Compile Include="ActionInvocation.cs" />
     <Compile Include="ActionMap.cs" />
+    <Compile Include="Chores\ArgumentInfo.cs" />
     <Compile Include="Chores\Chore.cs" />
     <Compile Include="Chores\ParameterAttribute.cs" />
     <Compile Include="Chores\ChoreRunnerInvocation.cs" />

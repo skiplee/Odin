@@ -23,6 +23,29 @@ namespace Odin.Tests.Chores
             Chore2Executed = true;
         }
 
+        [Chore]
+        public int ChoreReturns21()
+        {
+            return 21;
+        }
+
+        [Chore]
+        public void ChoreUsesParameter()
+        {
+            ChoreUsesParameterValue = Parameter1;
+        }
+
+        public string ChoreUsesParameterValue { get; set; }
+
+        [Parameter]
+        public string Parameter1 { get; set; }
+
         public bool Chore2Executed { get; private set; }
+
+        [Chore]
+        public void ChoreThrowsException()
+        {
+            throw new Exception("ChoreThrowsException");
+        }
     }
 }
